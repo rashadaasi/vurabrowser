@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VuraBrowser — The Web3 Browser</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════ */
+:root {
+  --gold:#f5c842;--gold-light:#ffe180;--gold-dark:#b8860b;
+  --green:#4ade80;--green-mid:#22c55e;--green-dark:#166534;--green-deep:#052e16;--green-light:#86efac;
+  --teal:#2dd4bf;--purple:#a855f7;--blue:#60a5fa;--red:#f87171;--orange:#fb923c;
+  --bg:#0a0a0a;--bg2:#111;--bg3:#161616;--bg4:#1c1c1c;
+  --chrome:#1a1a1a;--chrome2:#222;--chrome3:#2a2a2a;
+  --surface:rgba(255,255,255,0.04);--surface2:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f0f0f0;--text2:#b0b0b0;--muted:#666;
+  --accent:#4ade80;--accent2:#f5c842;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;user-select:none;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;}
+input,textarea{-webkit-user-select:text;user-select:text;}
+
+/* SCROLLBARS */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.25);}
+
+/* ═══ BROWSER SHELL ═══ */
+.browser{display:flex;flex-direction:column;height:100vh;background:var(--chrome);}
+
+/* ═══════════════════════════════════════
+   TITLE BAR
+═══════════════════════════════════════ */
+.title-bar{
+  display:flex;align-items:center;
+  background:var(--bg);
+  padding:0 12px;
+  height:38px;
+  flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  gap:8px;
+}
+/* Traffic lights */
+.traffic-lights{display:flex;align-items:center;gap:6px;margin-right:8px;}
+.tl{width:12px;height:12px;border-radius:50%;cursor:pointer;transition:filter 0.2s;}
+.tl:hover{filter:brightness(1.3);}
+.tl.close{background:#ff5f57;}
+.tl.min{background:#febc2e;}
+.tl.max{background:#28c840;}
+/* Logo */
+.tb-logo{display:flex;align-items:center;gap:7px;}
+.tb-logo-icon{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fffbe0 0%,#f5c842 12%,#d4a017 28%,#8b6310 50%,#5c3f08 70%,#f5c842 100%);box-shadow:0 0 8px rgba(245,200,66,0.4);padding:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tb-logo-inner{width:100%;height:100%;border-radius:50%;background:#0a150a;overflow:hidden;}
+.tb-logo-inner img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.tb-logo-text{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;background:linear-gradient(135deg,var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* ═══════════════════════════════════════
+   TAB BAR
+═══════════════════════════════════════ */
+.tab-bar{
+  display:flex;align-items:flex-end;
+  background:var(--bg);
+  padding:0 8px 0;
+  height:36px;
+  flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;
+  overflow-y:hidden;
+  gap:2px;
+}
+.tab-bar::-webkit-scrollbar{height:0;}
+.tab{
+  display:flex;align-items:center;gap:7px;
+  min-width:160px;max-width:220px;
+  height:30px;
+  background:var(--chrome2);
+  border:1px solid var(--border);
+  border-bottom:none;
+  border-radius:8px 8px 0 0;
+  padding:0 10px 0 10px;
+  cursor:pointer;
+  transition:background 0.15s;
+  flex-shrink:0;
+  position:relative;
+  top:1px;
+}
+.tab:hover{background:var(--chrome3);}
+.tab.active{background:var(--chrome);border-color:var(--border2);border-bottom-color:var(--chrome);}
+.tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:var(--chrome);}
+.tab-favicon{width:14px;height:14px;border-radius:3px;flex-shrink:0;font-size:12px;display:flex;align-items:center;justify-content:center;}
+.tab-title{flex:1;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tab.active .tab-title{color:var(--text);}
+.tab-close{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);transition:all 0.2s;flex-shrink:0;}
+.tab-close:hover{background:rgba(255,255,255,0.1);color:var(--text);}
+.new-tab-btn{width:28px;height:28px;border-radius:50%;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);transition:all 0.2s;flex-shrink:0;margin-bottom:2px;}
+.new-tab-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* ═══════════════════════════════════════
+   TOOLBAR
+═══════════════════════════════════════ */
+.toolbar{
+  display:flex;align-items:center;
+  background:var(--chrome);
+  padding:6px 12px;
+  height:48px;
+  flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  gap:6px;
+}
+/* Nav buttons */
+.nav-btn{
+  width:30px;height:30px;border-radius:8px;
+  background:transparent;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--muted);transition:all 0.2s;
+}
+.nav-btn:hover{background:var(--surface2);color:var(--text);}
+.nav-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.nav-btn:active:not(:disabled){background:var(--surface);transform:scale(0.93);}
+/* Address bar */
+.address-wrap{
+  flex:1;position:relative;
+}
+.address-bar{
+  width:100%;height:32px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:0 40px 0 36px;
+  font-family:'Exo 2',sans-serif;
+  font-size:13px;color:var(--text);
+  outline:none;transition:all 0.2s;
+  -webkit-user-select:text;user-select:text;
+}
+.address-bar:focus{border-color:var(--accent);background:var(--bg3);box-shadow:0 0 0 3px rgba(74,222,128,0.1);}
+.address-bar::placeholder{color:var(--muted);}
+.ab-lock{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--green);}
+.ab-go{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:var(--green-dark);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--bg);transition:all 0.2s;}
+.ab-go:hover{background:var(--green-mid);}
+/* Suggestions dropdown */
+.suggestions{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:12px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  z-index:1000;display:none;
+}
+.suggestions.show{display:block;}
+.suggestion-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;cursor:pointer;transition:background 0.15s;
+}
+.suggestion-item:hover{background:var(--surface2);}
+.sg-icon{font-size:15px;flex-shrink:0;}
+.sg-text{font-size:13px;color:var(--text2);}
+.sg-text strong{color:var(--accent);}
+.sg-type{font-size:10px;color:var(--muted);margin-left:auto;font-family:'JetBrains Mono',monospace;}
+/* Toolbar right */
+.toolbar-right{display:flex;align-items:center;gap:4px;margin-left:4px;}
+.tb-btn{width:30px;height:30px;border-radius:8px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);transition:all 0.2s;position:relative;}
+.tb-btn:hover{background:var(--surface2);color:var(--text);}
+.tb-btn.active{color:var(--accent);}
+.tb-badge{position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--red);border:1.5px solid var(--chrome);}
+
+/* ═══════════════════════════════════════
+   BOOKMARKS BAR
+═══════════════════════════════════════ */
+.bookmarks-bar{
+  display:flex;align-items:center;
+  background:var(--chrome);
+  padding:4px 12px;
+  height:32px;
+  flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  gap:2px;
+  overflow-x:auto;
+}
+.bookmarks-bar::-webkit-scrollbar{height:0;}
+.bm-item{
+  display:flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:6px;
+  cursor:pointer;transition:background 0.15s;
+  white-space:nowrap;flex-shrink:0;
+}
+.bm-item:hover{background:var(--surface2);}
+.bm-favicon{font-size:12px;}
+.bm-title{font-size:11px;color:var(--text2);}
+.bm-sep{width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0;}
+
+/* ═══════════════════════════════════════
+   MAIN CONTENT AREA
+═══════════════════════════════════════ */
+.content-area{
+  flex:1;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+}
+/* Page frame */
+.page-frame{
+  flex:1;
+  position:relative;
+  overflow:auto;
+  background:#fff;
+}
+.page-frame::-webkit-scrollbar{display:none;}
+
+/* ═══════════════════════════════════════
+   NEW TAB PAGE
+═══════════════════════════════════════ */
+.new-tab-page{
+  min-height:100%;
+  background:linear-gradient(135deg,#020702 0%,#040e04 50%,#020702 100%);
+  display:flex;flex-direction:column;align-items:center;
+  padding:40px 20px;
+  position:relative;overflow:hidden;
+}
+.ntp-bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(74,222,128,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(74,222,128,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;}
+.ntp-bg-glow{position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(74,222,128,0.06),transparent 65%);pointer-events:none;}
+/* NTP Header */
+.ntp-header{text-align:center;margin-bottom:36px;position:relative;z-index:1;}
+.ntp-time{font-family:'Orbitron',monospace;font-size:64px;font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1;}
+.ntp-date{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--muted);margin-top:8px;letter-spacing:2px;}
+/* NTP Search */
+.ntp-search{width:100%;max-width:580px;margin-bottom:36px;position:relative;z-index:1;}
+.ntp-search-bar{
+  width:100%;padding:16px 52px 16px 20px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:50px;
+  font-family:'Exo 2',sans-serif;font-size:16px;
+  color:var(--text);outline:none;transition:all 0.2s;
+  -webkit-user-select:text;user-select:text;
+}
+.ntp-search-bar:focus{border-color:var(--accent);background:rgba(255,255,255,0.08);box-shadow:0 0 0 4px rgba(74,222,128,0.1);}
+.ntp-search-bar::placeholder{color:var(--muted);}
+.ntp-search-btn{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,var(--green-dark),var(--green-mid));
+  border:none;cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;
+}
+.ntp-search-btn:hover{box-shadow:0 0 16px rgba(74,222,128,0.4);}
+/* Quick links */
+.ntp-quick{display:flex;gap:16px;margin-bottom:36px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center;}
+.ql-item{
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  width:72px;cursor:pointer;
+}
+.ql-icon{
+  width:52px;height:52px;border-radius:14px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;transition:all 0.2s;
+}
+.ql-item:hover .ql-icon{background:rgba(255,255,255,0.1);border-color:rgba(74,222,128,0.3);transform:translateY(-2px);}
+.ql-label{font-size:10px;color:var(--muted);text-align:center;letter-spacing:0.5px;}
+/* VT Price widget */
+.ntp-widgets{display:flex;gap:14px;margin-bottom:28px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center;max-width:800px;width:100%;}
+.ntp-widget{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px 18px;flex:1;min-width:160px;max-width:200px;}
+.nwt-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+.nwt-val{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--text);display:block;margin-bottom:2px;}
+.nwt-chg{font-size:11px;}
+.nwt-chg.up{color:var(--green);}
+.nwt-chg.dn{color:var(--red);}
+/* Recent sites */
+.ntp-recent{position:relative;z-index:1;width:100%;max-width:700px;}
+.nr-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+.nr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.nr-card{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px;padding:12px;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.nr-card:hover{background:rgba(255,255,255,0.07);border-color:rgba(74,222,128,0.2);}
+.nr-favicon{font-size:24px;margin-bottom:6px;display:block;}
+.nr-name{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nr-url{font-size:9px;color:var(--muted);}
+
+/* ═══════════════════════════════════════
+   SIDEBAR PANELS
+═══════════════════════════════════════ */
+.side-panel{
+  width:0;background:var(--bg3);
+  border-left:1px solid var(--border);
+  overflow:hidden;transition:width 0.3s ease;
+  flex-shrink:0;display:flex;flex-direction:column;
+}
+.side-panel.open{width:300px;}
+.sp-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.sp-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent);}
+.sp-close{width:24px;height:24px;border-radius:50%;background:var(--surface);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);}
+.sp-body{flex:1;overflow-y:auto;padding:14px;}
+/* History item */
+.hist-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-bottom:4px;}
+.hist-item:hover{background:var(--surface2);}
+.hi-favicon{font-size:14px;flex-shrink:0;}
+.hi-info{flex:1;overflow:hidden;}
+.hi-title{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;}
+.hi-url{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hi-time{font-size:9px;color:var(--muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+/* Bookmarks panel */
+.bm-folder{margin-bottom:10px;}
+.bmf-title{font-size:11px;font-weight:600;color:var(--text2);padding:6px 8px;display:flex;align-items:center;gap:6px;cursor:pointer;border-radius:8px;transition:background 0.15s;}
+.bmf-title:hover{background:var(--surface);}
+.bm-list-item{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 24px;border-radius:8px;cursor:pointer;transition:background 0.15s;}
+.bm-list-item:hover{background:var(--surface2);}
+.bli-fav{font-size:13px;}
+.bli-title{font-size:12px;color:var(--text2);}
+/* Downloads */
+.dl-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.dli-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.dli-icon{font-size:20px;}
+.dli-name{font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dli-size{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.dli-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+.dli-fill{height:100%;background:linear-gradient(90deg,var(--green-dark),var(--green));border-radius:2px;transition:width 1s linear;}
+.dli-status{font-size:10px;color:var(--muted);margin-top:5px;}
+/* Extensions */
+.ext-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;}
+.ext-icon{font-size:22px;flex-shrink:0;}
+.ext-info{flex:1;}
+.ext-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.ext-desc{font-size:10px;color:var(--muted);}
+/* Toggle switch */
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,0.15);border-radius:10px;cursor:pointer;transition:background 0.2s;}
+.toggle input:checked + .toggle-slider{background:var(--green-dark);}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:transform 0.2s;}
+.toggle input:checked + .toggle-slider::before{transform:translateX(16px);}
+
+/* ═══════════════════════════════════════
+   SETTINGS PAGE
+═══════════════════════════════════════ */
+.settings-page{
+  min-height:100%;
+  background:var(--bg);
+  display:flex;
+}
+.settings-sidebar{
+  width:220px;background:var(--bg2);
+  border-right:1px solid var(--border);
+  padding:20px 12px;flex-shrink:0;
+}
+.ss-title{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--accent);margin-bottom:16px;padding:0 8px;}
+.ss-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.2s;margin-bottom:3px;}
+.ss-item:hover{background:var(--surface2);color:var(--text);}
+.ss-item.active{background:rgba(74,222,128,0.1);color:var(--accent);}
+.ss-icon{font-size:16px;}
+.settings-content{flex:1;padding:28px;overflow-y:auto;}
+.sc-section{margin-bottom:28px;}
+.sc-section-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent);margin-bottom:14px;text-transform:uppercase;}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;}
+.sr-info{}
+.sr-title{font-size:14px;color:var(--text);margin-bottom:2px;}
+.sr-desc{font-size:11px;color:var(--muted);}
+.setting-select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Exo 2',sans-serif;font-size:12px;color:var(--text);outline:none;cursor:pointer;}
+.setting-select option{background:var(--bg3);}
+
+/* ═══════════════════════════════════════
+   DEV TOOLS PANEL (bottom)
+═══════════════════════════════════════ */
+.devtools{
+  height:0;background:var(--bg);
+  border-top:1px solid var(--border);
+  overflow:hidden;transition:height 0.3s ease;
+  flex-shrink:0;display:flex;flex-direction:column;
+}
+.devtools.open{height:280px;}
+.dt-tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);height:32px;flex-shrink:0;}
+.dt-tab{padding:0 16px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;border-bottom:2px solid transparent;transition:all 0.2s;}
+.dt-tab:hover{color:var(--text);}
+.dt-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.dt-close{margin-left:auto;width:30px;height:30px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center;}
+.dt-close:hover{color:var(--text);}
+.dt-content{flex:1;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px;}
+/* Console */
+.console-line{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;gap:12px;}
+.cl-time{color:var(--muted);flex-shrink:0;font-size:10px;padding-top:1px;}
+.cl-type{flex-shrink:0;font-size:10px;padding:1px 6px;border-radius:4px;}
+.cl-type.log{background:rgba(96,165,250,0.1);color:var(--blue);}
+.cl-type.warn{background:rgba(251,146,60,0.1);color:var(--orange);}
+.cl-type.error{background:rgba(248,113,113,0.1);color:var(--red);}
+.cl-type.info{background:rgba(74,222,128,0.1);color:var(--green);}
+.cl-msg{color:var(--text2);flex:1;word-break:break-all;}
+/* Console input */
+.console-input-wrap{display:flex;align-items:center;padding:6px 8px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2);}
+.ci-prompt{color:var(--accent);margin-right:8px;font-size:13px;}
+.ci-input{flex:1;background:transparent;border:none;outline:none;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);-webkit-user-select:text;user-select:text;}
+/* Network tab */
+.network-row{display:flex;align-items:center;gap:0;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;cursor:pointer;transition:background 0.1s;}
+.network-row:hover{background:rgba(255,255,255,0.04);}
+.nr-method{width:52px;color:var(--green);font-weight:700;flex-shrink:0;}
+.nr-method.post{color:var(--orange);}
+.nr-url{flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nr-status{width:50px;text-align:center;flex-shrink:0;}
+.nr-status.ok{color:var(--green);}
+.nr-status.err{color:var(--red);}
+.nr-size{width:70px;text-align:right;color:var(--muted);flex-shrink:0;}
+.nr-time{width:70px;text-align:right;color:var(--muted);flex-shrink:0;}
+/* Elements tab */
+.elem-line{padding:3px 8px;cursor:pointer;transition:background 0.1s;}
+.elem-line:hover{background:rgba(255,255,255,0.04);}
+.el-tag{color:#60a5fa;}
+.el-attr-name{color:#86efac;}
+.el-attr-val{color:#f5c842;}
+.el-content{color:var(--text2);}
+.el-indent{display:inline-block;width:16px;}
+
+/* ═══════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════ */
+.status-bar{
+  height:22px;background:var(--bg);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 12px;gap:16px;
+  flex-shrink:0;
+}
+.sb-text{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+.sb-text.green{color:var(--green);}
+.sb-text.gold{color:var(--gold);}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;margin-right:4px;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.sb-right{margin-left:auto;display:flex;align-items:center;gap:14px;}
+.sb-progress{width:140px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;display:none;}
+.sb-progress.show{display:block;}
+.sb-progress-fill{height:100%;background:linear-gradient(90deg,var(--green-dark),var(--green));border-radius:2px;animation:progress-load 2s ease forwards;}
+@keyframes progress-load{from{width:0;}to{width:100%;}}
+
+/* ═══════════════════════════════════════
+   CONTEXT MENU
+═══════════════════════════════════════ */
+.context-menu{
+  position:fixed;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  min-width:180px;z-index:9999;overflow:hidden;
+  opacity:0;pointer-events:none;transition:opacity 0.15s;
+}
+.context-menu.show{opacity:1;pointer-events:all;}
+.cm-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;color:var(--text2);transition:background 0.15s;}
+.cm-item:hover{background:var(--surface2);color:var(--text);}
+.cm-item.danger{color:var(--red);}
+.cm-item .cm-icon{font-size:14px;width:16px;}
+.cm-sep{height:1px;background:var(--border);margin:4px 0;}
+.cm-shortcut{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+
+/* ═══════════════════════════════════════
+   NOTIFICATION
+═══════════════════════════════════════ */
+.notif{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:14px;padding:14px 16px;
+  max-width:300px;z-index:8888;
+  transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);
+}
+.notif.show{transform:translateX(0);}
+.notif-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.notif-icon{font-size:18px;}
+.notif-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--text);letter-spacing:1px;}
+.notif-msg{font-size:12px;color:var(--muted);line-height:1.5;}
+.notif-close{position:absolute;top:10px;right:10px;width:18px;height:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;}
+
+/* LOADING STATE */
+.loading-overlay{position:absolute;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.loading-overlay.show{opacity:1;pointer-events:all;}
+.lo-spinner{width:40px;height:40px;border:3px solid rgba(74,222,128,0.1);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ═══ FIND IN PAGE ═══ */
+.find-bar{
+  position:absolute;top:8px;right:12px;z-index:500;
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:10px;padding:6px 10px;
+  display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.4);
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.find-bar.show{opacity:1;pointer-events:all;}
+.find-input{background:transparent;border:none;outline:none;font-family:'Exo 2',sans-serif;font-size:13px;color:var(--text);width:180px;-webkit-user-select:text;user-select:text;}
+.find-input::placeholder{color:var(--muted);}
+.find-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+.find-btn{width:22px;height:22px;border-radius:5px;background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;}
+.find-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* ═══ RESPONSIVE ═══ */
+.vura-ecosystem-page{min-height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;padding:32px;overflow-y:auto;}
+</style>
+</head>
+<body>
+
+<!-- CONTEXT MENU -->
+<div class="context-menu" id="context-menu">
+  <div class="cm-item" onclick="ctxAction('new-tab')"><span class="cm-icon">+</span>Open in New Tab<span class="cm-shortcut">Ctrl+T</span></div>
+  <div class="cm-item" onclick="ctxAction('save')"><span class="cm-icon">💾</span>Save Page As<span class="cm-shortcut">Ctrl+S</span></div>
+  <div class="cm-item" onclick="ctxAction('print')"><span class="cm-icon">🖨</span>Print<span class="cm-shortcut">Ctrl+P</span></div>
+  <div class="cm-sep"></div>
+  <div class="cm-item" onclick="ctxAction('inspect')"><span class="cm-icon">🔍</span>Inspect Element<span class="cm-shortcut">F12</span></div>
+  <div class="cm-item" onclick="ctxAction('source')"><span class="cm-icon">📄</span>View Page Source<span class="cm-shortcut">Ctrl+U</span></div>
+  <div class="cm-sep"></div>
+  <div class="cm-item" onclick="ctxAction('bookmark')"><span class="cm-icon">⭐</span>Bookmark This Page</div>
+  <div class="cm-item danger" onclick="ctxAction('clear')"><span class="cm-icon">🗑</span>Clear Browsing Data</div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif">
+  <div class="notif-close" onclick="hideNotif()">✕</div>
+  <div class="notif-hdr"><span class="notif-icon" id="notif-icon">ℹ️</span><span class="notif-title" id="notif-title">NOTIFICATION</span></div>
+  <div class="notif-msg" id="notif-msg">Message here</div>
+</div>
+
+<!-- BROWSER -->
+<div class="browser" oncontextmenu="showContextMenu(event)">
+
+  <!-- TITLE BAR -->
+  <div class="title-bar">
+    <div class="traffic-lights">
+      <div class="tl close" onclick="notify('🔴','CLOSE','Browser would close in a real deployment')"></div>
+      <div class="tl min" onclick="notify('🟡','MINIMIZE','Window minimized')"></div>
+      <div class="tl max" onclick="notify('🟢','MAXIMIZE','Window maximized')"></div>
+    </div>
+    <div class="tb-logo">
+      <div class="tb-logo-icon"><div class="tb-logo-inner"><img src="/mnt/user-data/uploads/Vura_Stream_Transparent__bAckground_1.png" alt="V"></div></div>
+      <span class="tb-logo-text">VURA BROWSER</span>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);" id="tb-time"></div>
+      <div style="display:flex;align-items:center;gap:4px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.15);border-radius:20px;padding:3px 10px;">
+        <div class="sb-dot" style="margin-right:0;"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);" id="vt-price-tb">$VT $0.0100</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar" id="tab-bar">
+    <!-- Tabs rendered by JS -->
+    <button class="new-tab-btn" onclick="addTab()" title="New Tab">+</button>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="nav-btn" id="btn-back" onclick="navBack()" title="Back">◀</button>
+    <button class="nav-btn" id="btn-forward" onclick="navForward()" title="Forward">▶</button>
+    <button class="nav-btn" id="btn-reload" onclick="reloadPage()" title="Reload">↺</button>
+    <button class="nav-btn" onclick="navigate('new-tab')" title="Home">⌂</button>
+
+    <div class="address-wrap">
+      <span class="ab-lock" id="ab-lock">🔒</span>
+      <input class="address-bar" id="address-bar" type="text"
+        placeholder="Search or enter a URL..."
+        onfocus="showSuggestions(this)"
+        onblur="setTimeout(hideSuggestions,200)"
+        onkeydown="addressKeydown(event)"
+        oninput="updateSuggestions(this.value)">
+      <button class="ab-go" onclick="goAddress()" title="Go">→</button>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+
+    <div class="toolbar-right">
+      <button class="tb-btn" id="btn-bookmark" onclick="toggleBookmark()" title="Bookmark">☆</button>
+      <button class="tb-btn" onclick="togglePanel('history')" title="History">🕐</button>
+      <button class="tb-btn" onclick="togglePanel('downloads')" title="Downloads">⬇<span class="tb-badge" id="dl-badge" style="display:none;"></span></button>
+      <button class="tb-btn" onclick="togglePanel('extensions')" title="Extensions">🧩</button>
+      <button class="tb-btn" onclick="toggleFind()" title="Find in Page">🔍</button>
+      <button class="tb-btn" onclick="toggleDevTools()" title="Developer Tools">⚙</button>
+      <button class="tb-btn" onclick="navigate('settings')" title="Settings">⋮</button>
+    </div>
+  </div>
+
+  <!-- BOOKMARKS BAR -->
+  <div class="bookmarks-bar" id="bookmarks-bar">
+    <div class="bm-item" onclick="navigate('vura-token')"><span class="bm-favicon">🪙</span><span class="bm-title">Vura Token</span></div>
+    <div class="bm-item" onclick="navigate('vura-market')"><span class="bm-favicon">🏪</span><span class="bm-title">Vura Market</span></div>
+    <div class="bm-item" onclick="navigate('vura-nft')"><span class="bm-favicon">🖼</span><span class="bm-title">Vura NFT</span></div>
+    <div class="bm-item" onclick="navigate('vura-dao')"><span class="bm-favicon">🏛</span><span class="bm-title">Vura DAO</span></div>
+    <div class="bm-item" onclick="navigate('vura-pay')"><span class="bm-favicon">💸</span><span class="bm-title">Vura Pay</span></div>
+    <div class="bm-sep"></div>
+    <div class="bm-item" onclick="notify('🔗','Bookmark','Open Bookmarks panel to manage all bookmarks')"><span class="bm-favicon">📁</span><span class="bm-title">Other Bookmarks</span></div>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area" style="position:relative;flex-direction:column;">
+
+    <!-- FIND BAR -->
+    <div class="find-bar" id="find-bar">
+      <input class="find-input" id="find-input" placeholder="Find in page..." oninput="findInPage(this.value)" onkeydown="findKeydown(event)">
+      <span class="find-count" id="find-count">0 / 0</span>
+      <button class="find-btn" onclick="findNav(-1)">▲</button>
+      <button class="find-btn" onclick="findNav(1)">▼</button>
+      <button class="find-btn" onclick="toggleFind()">✕</button>
+    </div>
+
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <!-- PAGE CONTENT -->
+      <div class="page-frame" id="page-frame">
+        <div class="loading-overlay" id="loading-overlay">
+          <div class="lo-spinner"></div>
+        </div>
+        <!-- Page content rendered here -->
+        <div id="page-content"></div>
+      </div>
+
+      <!-- SIDE PANEL -->
+      <div class="side-panel" id="side-panel">
+        <div class="sp-hdr">
+          <span class="sp-title" id="sp-title">HISTORY</span>
+          <button class="sp-close" onclick="closePanel()">✕</button>
+        </div>
+        <div class="sp-body" id="sp-body"></div>
+      </div>
+    </div>
+
+    <!-- DEV TOOLS -->
+    <div class="devtools" id="devtools">
+      <div class="dt-tabs">
+        <div class="dt-tab active" onclick="switchDtTab(this,'elements')">Elements</div>
+        <div class="dt-tab" onclick="switchDtTab(this,'console')">Console</div>
+        <div class="dt-tab" onclick="switchDtTab(this,'network')">Network</div>
+        <div class="dt-tab" onclick="switchDtTab(this,'sources')">Sources</div>
+        <button class="dt-close" onclick="toggleDevTools()">✕</button>
+      </div>
+      <div id="dt-content" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;"></div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="sb-dot"></div>
+    <span class="sb-text green" id="status-text">Ready</span>
+    <div class="sb-progress" id="sb-progress"><div class="sb-progress-fill" id="sb-fill"></div></div>
+    <div class="sb-right">
+      <span class="sb-text gold" id="sb-vt">1 VT = $0.0100</span>
+      <span class="sb-text">🔒 Secure</span>
+      <span class="sb-text">BNB Chain</span>
+      <span class="sb-text" id="sb-zoom">100%</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let vtPrice = 0.01;
+let devToolsOpen = false;
+let activePanelId = null;
+let findOpen = false;
+let activeTabId = 1;
+let tabCounter = 1;
+let currentUrl = 'vura-browser://newtab';
+let bookmarked = false;
+
+const tabs = [
+  { id:1, title:'New Tab', url:'vura-browser://newtab', favicon:'🏠', history:['vura-browser://newtab'], histIdx:0 }
+];
+
+// ══════════════════════════════════════
+// VT PRICE SIMULATION
+// ══════════════════════════════════════
+function simVtPrice() {
+  vtPrice = Math.max(0.0095, Math.min(0.015, vtPrice + (Math.random()-0.48)*0.0002));
+  const str = '$0.'+vtPrice.toFixed(4).split('.')[1];
+  document.getElementById('vt-price-tb').textContent = '$VT '+str;
+  document.getElementById('sb-vt').textContent = '1 VT = '+str;
+  const ntpVt = document.getElementById('ntp-vt-price');
+  if(ntpVt) ntpVt.textContent = str;
+}
+setInterval(simVtPrice, 4000);
+
+// ══════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const el = document.getElementById('tb-time');
+  if(el) el.textContent = h+':'+m;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function renderTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  tabs.forEach(tab => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (tab.id===activeTabId?' active':'');
+    el.onclick = () => switchTab(tab.id);
+    el.innerHTML = `
+      <div class="tab-favicon">${tab.favicon}</div>
+      <div class="tab-title">${tab.title}</div>
+      <div class="tab-close" onclick="event.stopPropagation();closeTab(${tab.id})">✕</div>`;
+    bar.appendChild(el);
+  });
+  const newBtn = document.createElement('button');
+  newBtn.className='new-tab-btn';
+  newBtn.textContent='+';
+  newBtn.onclick=addTab;
+  newBtn.title='New Tab';
+  bar.appendChild(newBtn);
+}
+
+function addTab() {
+  tabCounter++;
+  tabs.push({ id:tabCounter, title:'New Tab', url:'vura-browser://newtab', favicon:'🏠', history:['vura-browser://newtab'], histIdx:0 });
+  activeTabId = tabCounter;
+  renderTabs();
+  loadPage('vura-browser://newtab');
+}
+
+function closeTab(id) {
+  if(tabs.length===1){loadPage('vura-browser://newtab');return;}
+  const idx = tabs.findIndex(t=>t.id===id);
+  tabs.splice(idx,1);
+  if(activeTabId===id) activeTabId=tabs[Math.min(idx,tabs.length-1)].id;
+  renderTabs();
+  const t = tabs.find(t=>t.id===activeTabId);
+  loadPage(t.url,false);
+}
+
+function switchTab(id) {
+  activeTabId=id;
+  renderTabs();
+  const t=tabs.find(t=>t.id===id);
+  loadPage(t.url,false);
+}
+
+function getActiveTab() { return tabs.find(t=>t.id===activeTabId); }
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+const PAGE_MAP = {
+  'vura-browser://newtab':  { title:'New Tab',      favicon:'🏠',  render:renderNewTab },
+  'vura-browser://settings':{ title:'Settings',     favicon:'⚙️',  render:renderSettings },
+  'vura-browser://history': { title:'History',      favicon:'🕐',  render:()=>togglePanel('history') },
+  'vura-token':             { title:'Vura Token — $VT', favicon:'🪙', url:'https://vuratoken.com', render:()=>renderVuraPage('token') },
+  'vura-market':            { title:'Vura Market',  favicon:'🏪',  render:()=>renderVuraPage('market') },
+  'vura-nft':               { title:'Vura NFT',     favicon:'🖼',  render:()=>renderVuraPage('nft') },
+  'vura-dao':               { title:'Vura DAO',     favicon:'🏛',  render:()=>renderVuraPage('dao') },
+  'vura-pay':               { title:'Vura Pay',     favicon:'💸',  render:()=>renderVuraPage('pay') },
+  'vura-stream':            { title:'Vura Stream',  favicon:'📺',  render:()=>renderVuraPage('stream') },
+  'settings':               { title:'Settings',     favicon:'⚙️',  render:renderSettings },
+};
+
+function navigate(page) {
+  loadPage(page);
+}
+
+function loadPage(page, addHistory=true) {
+  const bar = document.getElementById('address-bar');
+  currentUrl = page;
+  // Show loading
+  showLoading();
+  setTimeout(() => {
+    hideLoading();
+    const pageConf = PAGE_MAP[page];
+    if(pageConf) {
+      bar.value = pageConf.url || ('vura-browser://'+page);
+      updateTabInfo(pageConf.title, pageConf.favicon, page);
+      if(addHistory) pushHistory(page);
+      pageConf.render();
+    } else if(page.startsWith('http')) {
+      bar.value = page;
+      updateTabInfo('External Page', '🌐', page);
+      if(addHistory) pushHistory(page);
+      renderExternalPage(page);
+    } else {
+      // treat as search
+      const searchUrl = 'https://search.vura.io/search?q='+encodeURIComponent(page);
+      bar.value = searchUrl;
+      updateTabInfo('Search: '+page, '🔍', searchUrl);
+      if(addHistory) pushHistory(searchUrl);
+      renderSearchPage(page);
+    }
+    updateNavButtons();
+    updateBookmarkBtn();
+    updateStatus('Page loaded');
+  }, Math.random()*400+200);
+}
+
+function showLoading() {
+  const lo = document.getElementById('loading-overlay');
+  if(lo) { lo.classList.add('show'); }
+  const sp = document.getElementById('sb-progress');
+  const sf = document.getElementById('sb-fill');
+  if(sp&&sf) { sp.classList.add('show'); sf.style.animation='none'; sf.offsetHeight; sf.style.animation=''; sp.classList.remove('show'); sp.classList.add('show'); }
+  document.getElementById('btn-reload').textContent='✕';
+  updateStatus('Loading...');
+}
+function hideLoading() {
+  const lo = document.getElementById('loading-overlay');
+  if(lo) lo.classList.remove('show');
+  document.getElementById('btn-reload').textContent='↺';
+  setTimeout(()=>{ const sp=document.getElementById('sb-progress'); if(sp) sp.classList.remove('show'); },2000);
+}
+
+function updateTabInfo(title, favicon, url) {
+  const t = getActiveTab();
+  if(!t) return;
+  t.title = title;
+  t.favicon = favicon;
+  t.url = url;
+  renderTabs();
+}
+
+function pushHistory(url) {
+  const t = getActiveTab();
+  if(!t) return;
+  t.history = t.history.slice(0, t.histIdx+1);
+  t.history.push(url);
+  t.histIdx = t.history.length-1;
+  // Add to global history
+  HISTORY_DATA.unshift({ favicon:getFaviconForUrl(url), title:document.getElementById('address-bar').value, url, time:'Just now' });
+}
+
+function navBack() {
+  const t=getActiveTab(); if(!t||t.histIdx<=0) return;
+  t.histIdx--;
+  loadPage(t.history[t.histIdx], false);
+}
+function navForward() {
+  const t=getActiveTab(); if(!t||t.histIdx>=t.history.length-1) return;
+  t.histIdx++;
+  loadPage(t.history[t.histIdx], false);
+}
+function reloadPage() { const t=getActiveTab(); if(t) loadPage(t.url,false); }
+function updateNavButtons() {
+  const t=getActiveTab();
+  document.getElementById('btn-back').disabled = !t||t.histIdx<=0;
+  document.getElementById('btn-forward').disabled = !t||t.histIdx>=t.history.length-1;
+}
+function getFaviconForUrl(url) {
+  if(url.includes('token')) return '🪙';
+  if(url.includes('market')) return '🏪';
+  if(url.includes('nft')) return '🖼';
+  if(url.includes('dao')) return '🏛';
+  if(url.includes('pay')) return '💸';
+  if(url.includes('stream')) return '📺';
+  if(url.includes('newtab')) return '🏠';
+  return '🌐';
+}
+
+// ══════════════════════════════════════
+// ADDRESS BAR
+// ══════════════════════════════════════
+const SUGGESTIONS_DATA = [
+  { icon:'🪙', text:'vuratoken.com', page:'vura-token', type:'Bookmark' },
+  { icon:'🏪', text:'vuramarket.com', page:'vura-market', type:'Bookmark' },
+  { icon:'🖼', text:'vuranft.com', page:'vura-nft', type:'Bookmark' },
+  { icon:'🏛', text:'vuradao.com', page:'vura-dao', type:'Bookmark' },
+  { icon:'💸', text:'vurapay.com', page:'vura-pay', type:'Bookmark' },
+  { icon:'📺', text:'vurastream.com', page:'vura-stream', type:'Bookmark' },
+  { icon:'🔍', text:'vura token price', page:'vura token price', type:'Search' },
+  { icon:'🔍', text:'how to mine vt', page:'how to mine vt', type:'Search' },
+  { icon:'🔍', text:'vt usdt converter', page:'vt usdt converter', type:'Search' },
+];
+
+function showSuggestions(input) { updateSuggestions(input.value); }
+function hideSuggestions() { document.getElementById('suggestions').classList.remove('show'); }
+function updateSuggestions(val) {
+  const sg = document.getElementById('suggestions');
+  if(!val) { sg.classList.remove('show'); return; }
+  const results = SUGGESTIONS_DATA.filter(s=>s.text.toLowerCase().includes(val.toLowerCase())).slice(0,6);
+  if(!results.length) { sg.classList.remove('show'); return; }
+  sg.innerHTML = results.map(s=>`
+    <div class="suggestion-item" onclick="navigate('${s.page}');hideSuggestions()">
+      <div class="sg-icon">${s.icon}</div>
+      <div class="sg-text">${s.text.replace(new RegExp(val,'gi'),m=>`<strong>${m}</strong>`)}</div>
+      <div class="sg-type">${s.type}</div>
+    </div>`).join('');
+  sg.classList.add('show');
+}
+function addressKeydown(e) {
+  if(e.key==='Enter') { goAddress(); }
+  if(e.key==='Escape') { hideSuggestions(); document.getElementById('address-bar').blur(); }
+}
+function goAddress() {
+  const val = document.getElementById('address-bar').value.trim();
+  if(!val) return;
+  hideSuggestions();
+  // Check if it matches a known page
+  const found = SUGGESTIONS_DATA.find(s=>s.text.toLowerCase()===val.toLowerCase()||s.page===val);
+  if(found) { navigate(found.page); return; }
+  if(PAGE_MAP[val]) { navigate(val); return; }
+  if(val.startsWith('http')) { loadPage(val); return; }
+  // Treat as search
+  loadPage(val);
+}
+function updateStatus(msg) { const el=document.getElementById('status-text'); if(el) el.textContent=msg; }
+
+// ══════════════════════════════════════
+// BOOKMARK
+// ══════════════════════════════════════
+function updateBookmarkBtn() {
+  const btn=document.getElementById('btn-bookmark');
+  btn.textContent = bookmarked ? '⭐' : '☆';
+  btn.classList.toggle('active', bookmarked);
+}
+function toggleBookmark() {
+  bookmarked=!bookmarked;
+  updateBookmarkBtn();
+  notify('⭐','BOOKMARK', bookmarked?'Page bookmarked!':'Bookmark removed');
+}
+
+// ══════════════════════════════════════
+// FIND IN PAGE
+// ══════════════════════════════════════
+function toggleFind() {
+  findOpen=!findOpen;
+  const fb=document.getElementById('find-bar');
+  fb.classList.toggle('show',findOpen);
+  if(findOpen) setTimeout(()=>document.getElementById('find-input').focus(),100);
+  else document.getElementById('find-count').textContent='0 / 0';
+}
+function findInPage(q) {
+  if(!q){document.getElementById('find-count').textContent='0 / 0';return;}
+  const n=Math.floor(Math.random()*8)+1;
+  document.getElementById('find-count').textContent='1 / '+n;
+}
+function findKeydown(e){ if(e.key==='Escape')toggleFind(); if(e.key==='Enter')findNav(1); }
+function findNav(dir){ const [a,b]=document.getElementById('find-count').textContent.split(' / ').map(Number); if(!b)return; const next=((a-1+dir+b)%b)+1; document.getElementById('find-count').textContent=next+' / '+b; }
+
+// ══════════════════════════════════════
+// DEV TOOLS
+// ══════════════════════════════════════
+function toggleDevTools() {
+  devToolsOpen=!devToolsOpen;
+  document.getElementById('devtools').classList.toggle('open',devToolsOpen);
+  if(devToolsOpen) renderDevTools('elements');
+}
+function switchDtTab(el,tab) {
+  document.querySelectorAll('.dt-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderDevTools(tab);
+}
+function renderDevTools(tab) {
+  const el=document.getElementById('dt-content');
+  if(tab==='elements') {
+    el.innerHTML=`<div style="flex:1;overflow-y:auto;padding:4px;">${ELEMENTS_HTML}</div>`;
+  } else if(tab==='console') {
+    el.innerHTML=`<div style="flex:1;overflow-y:auto;">${CONSOLE_LINES.map(l=>`<div class="console-line"><span class="cl-time">${l.time}</span><span class="cl-type ${l.type}">${l.type.toUpperCase()}</span><span class="cl-msg">${l.msg}</span></div>`).join('')}</div>
+    <div class="console-input-wrap"><span class="ci-prompt">›</span><input class="ci-input" placeholder="Enter JavaScript..." onkeydown="consoleInput(event)"></div>`;
+  } else if(tab==='network') {
+    el.innerHTML=`<div style="display:flex;padding:4px 8px;background:var(--bg2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);"><span style="width:52px;">METHOD</span><span style="flex:1;">URL</span><span style="width:50px;text-align:center;">STATUS</span><span style="width:70px;text-align:right;">SIZE</span><span style="width:70px;text-align:right;">TIME</span></div><div style="overflow-y:auto;flex:1;">${NETWORK_DATA.map(r=>`<div class="network-row"><span class="nr-method ${r.method.toLowerCase()}">${r.method}</span><span class="nr-url">${r.url}</span><span class="nr-status ${r.status<400?'ok':'err'}">${r.status}</span><span class="nr-size">${r.size}</span><span class="nr-time">${r.time}</span></div>`).join('')}</div>`;
+  } else if(tab==='sources') {
+    el.innerHTML=`<div style="flex:1;overflow:auto;padding:8px;white-space:pre;color:var(--text2);">${SOURCE_CODE}</div>`;
+  }
+}
+function consoleInput(e) {
+  if(e.key!=='Enter') return;
+  const val=e.target.value.trim();
+  if(!val) return;
+  CONSOLE_LINES.push({time:new Date().toLocaleTimeString(),type:'log',msg:'› '+val});
+  try { const r=eval(val); CONSOLE_LINES.push({time:new Date().toLocaleTimeString(),type:'info',msg:'← '+String(r)}); }
+  catch(err) { CONSOLE_LINES.push({time:new Date().toLocaleTimeString(),type:'error',msg:'← '+err.message}); }
+  e.target.value='';
+  renderDevTools('console');
+}
+
+// ══════════════════════════════════════
+// SIDE PANELS
+// ══════════════════════════════════════
+function togglePanel(panel) {
+  const sp=document.getElementById('side-panel');
+  if(activePanelId===panel&&sp.classList.contains('open')){closePanel();return;}
+  activePanelId=panel;
+  sp.classList.add('open');
+  document.getElementById('sp-title').textContent=panel.toUpperCase();
+  renderPanel(panel);
+}
+function closePanel() {
+  document.getElementById('side-panel').classList.remove('open');
+  activePanelId=null;
+}
+function renderPanel(panel) {
+  const body=document.getElementById('sp-body');
+  if(panel==='history') {
+    body.innerHTML=`<div style="margin-bottom:12px;display:flex;gap:6px;"><button style="flex:1;padding:7px;border-radius:8px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:var(--red);font-family:'Orbitron',monospace;font-size:9px;font-weight:700;cursor:pointer;" onclick="HISTORY_DATA=[];renderPanel('history');notify('🗑','CLEARED','Browsing history cleared')">CLEAR ALL</button></div>`+
+    HISTORY_DATA.map(h=>`<div class="hist-item" onclick="navigate('${h.url}')"><div class="hi-favicon">${h.favicon}</div><div class="hi-info"><div class="hi-title">${h.title}</div><div class="hi-url">${h.url}</div></div><div class="hi-time">${h.time}</div></div>`).join('');
+  } else if(panel==='downloads') {
+    body.innerHTML=DOWNLOADS.map(d=>`<div class="dl-item"><div class="dli-top"><div class="dli-icon">${d.icon}</div><div class="dli-name">${d.name}</div><div class="dli-size">${d.size}</div></div><div class="dli-bar"><div class="dli-fill" style="width:${d.pct}%;"></div></div><div class="dli-status">${d.status}</div></div>`).join('');
+  } else if(panel==='extensions') {
+    body.innerHTML=EXTENSIONS.map(e=>`<div class="ext-item"><div class="ext-icon">${e.icon}</div><div class="ext-info"><div class="ext-name">${e.name}</div><div class="ext-desc">${e.desc}</div></div><label class="toggle"><input type="checkbox" ${e.on?'checked':''} onchange="notify('🧩','EXTENSION','${e.name} '+(this.checked?'enabled':'disabled'))"><div class="toggle-slider"></div></label></div>`).join('');
+  } else if(panel==='bookmarks') {
+    body.innerHTML=BOOKMARKS.map(f=>`<div class="bm-folder"><div class="bmf-title">📁 ${f.folder}</div>${f.items.map(b=>`<div class="bm-list-item" onclick="navigate('${b.page}')"><div class="bli-fav">${b.favicon}</div><div class="bli-title">${b.title}</div></div>`).join('')}</div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════
+// PAGE RENDERERS
+// ══════════════════════════════════════
+function setPageContent(html) {
+  document.getElementById('page-content').innerHTML = html;
+}
+
+function renderNewTab() {
+  setPageContent(`
+    <div class="new-tab-page">
+      <div class="ntp-bg-grid"></div>
+      <div class="ntp-bg-glow"></div>
+      <div class="ntp-header">
+        <div class="ntp-time" id="ntp-clock">00:00</div>
+        <div class="ntp-date" id="ntp-date"></div>
+      </div>
+      <div class="ntp-search" style="width:100%;max-width:580px;">
+        <input class="ntp-search-bar" placeholder="Search the web or enter a URL..." onkeydown="ntpSearch(event)" id="ntp-search-input">
+        <button class="ntp-search-btn" onclick="ntpGo()">🔍</button>
+      </div>
+      <div class="ntp-quick">
+        ${QUICK_LINKS.map(q=>`<div class="ql-item" onclick="navigate('${q.page}')"><div class="ql-icon">${q.icon}</div><div class="ql-label">${q.label}</div></div>`).join('')}
+      </div>
+      <div class="ntp-widgets">
+        <div class="ntp-widget"><div class="nwt-label">$VT Price</div><span class="nwt-val" id="ntp-vt-price">$0.0100</span><div class="nwt-chg up">▲ +4.38% today</div></div>
+        <div class="ntp-widget"><div class="nwt-label">Treasury</div><span class="nwt-val" style="color:var(--gold);">850K VT</span><div class="nwt-chg up">DAO Controlled</div></div>
+        <div class="ntp-widget"><div class="nwt-label">Mining Rate</div><span class="nwt-val" style="color:var(--teal,#2dd4bf);">0.40/hr</span><div class="nwt-chg" style="color:var(--muted);">Base Rate</div></div>
+        <div class="ntp-widget"><div class="nwt-label">Active Miners</div><span class="nwt-val" style="color:var(--purple,#a855f7);">14.8K</span><div class="nwt-chg up">● Online Now</div></div>
+      </div>
+      <div class="ntp-recent">
+        <div class="nr-title">Recent Sites</div>
+        <div class="nr-grid">
+          ${RECENT_SITES.map(s=>`<div class="nr-card" onclick="navigate('${s.page}')"><div class="nr-favicon">${s.favicon}</div><div class="nr-name">${s.name}</div><div class="nr-url">${s.url}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>`);
+  // Update NTP clock
+  updateNtpClock();
+  setInterval(updateNtpClock, 1000);
+}
+
+function updateNtpClock() {
+  const now=new Date();
+  const tc=document.getElementById('ntp-clock');
+  const td=document.getElementById('ntp-date');
+  if(tc) tc.textContent=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(td) td.textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase();
+}
+
+function ntpSearch(e){ if(e.key==='Enter') ntpGo(); }
+function ntpGo(){const v=document.getElementById('ntp-search-input')?.value.trim();if(v)loadPage(v);}
+
+function renderVuraPage(section) {
+  const info = {
+    token:  { title:'Vura Token ($VT)', icon:'🪙', color:'#f5c842', desc:'The native utility token powering the entire Vura ecosystem. 1B supply, BNB Chain, launches July 2027.', stats:[['Price','$0.0100'],['Supply','1,000,000,000'],['Network','BNB Chain'],['Launch','July 2027']] },
+    market: { title:'Vura Market', icon:'🏪', color:'#4ade80', desc:'The Web3 marketplace where you can buy and sell products using $VT. 24 shops, 1,840 products.', stats:[['Shops','24 Active'],['Products','1,840'],['Orders','12.4K'],['Fee','2%']] },
+    nft:    { title:'Vura NFT', icon:'🖼', color:'#a855f7', desc:'The first NFT marketplace where every trade earns $VT. Buy, sell, mint digital assets.', stats:[['NFTs','12,480'],['Volume','48.2K VT'],['Traders','2,847'],['Floor','45 VT']] },
+    dao:    { title:'Vura DAO', icon:'🏛', color:'#60a5fa', desc:'Decentralized governance for the Vura ecosystem. Every $VT holder gets a voice.', stats:[['Members','2,847'],['Treasury','850K VT'],['Active','4 Proposals'],['Passed','38']] },
+    pay:    { title:'Vura Pay', icon:'💸', color:'#2dd4bf', desc:'The community payment layer. Send $VT instantly anywhere with near-zero fees.', stats:[['Users','14.8K'],['Sent','2.84M VT'],['Fee','0.5%'],['Speed','<3 sec']] },
+    stream: { title:'Vura Stream', icon:'📺', color:'#fb923c', desc:'The Watch-to-Earn streaming platform. Watch content and earn $VT automatically.', stats:[['Launch','Q1 2027'],['W2E','Active'],['Creators','10K+'],['Revenue','$VT']] },
+  };
+  const p = info[section]||info.token;
+  setPageContent(`
+    <div style="min-height:100%;background:linear-gradient(135deg,#020702,#040e04);color:#dcfce7;font-family:'Exo 2',sans-serif;padding:40px;display:flex;flex-direction:column;align-items:center;">
+      <div style="max-width:700px;width:100%;text-align:center;">
+        <div style="font-size:72px;margin-bottom:20px;filter:drop-shadow(0 0 20px ${p.color}40);">${p.icon}</div>
+        <h1 style="font-family:'Orbitron',monospace;font-size:32px;font-weight:900;color:${p.color};margin-bottom:12px;letter-spacing:1px;">${p.title}</h1>
+        <p style="font-size:16px;color:#86efac;line-height:1.75;margin-bottom:32px;">${p.desc}</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;">
+          ${p.stats.map(([l,v])=>`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px;text-align:center;"><div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:${p.color};margin-bottom:5px;">${v}</div><div style="font-size:10px;color:#4a6b55;letter-spacing:2px;text-transform:uppercase;">${l}</div></div>`).join('')}
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <button onclick="notify('🚀','LAUNCH','Opening ${p.title} in new tab')" style="padding:13px 28px;border-radius:50px;background:linear-gradient(135deg,#052e16,#22c55e);color:#f0fdf4;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:2px;border:none;cursor:pointer;">LAUNCH APP</button>
+          <button onclick="notify('📌','BOOKMARK','${p.title} bookmarked!')" style="padding:13px 28px;border-radius:50px;background:transparent;border:1px solid rgba(74,222,128,0.35);color:#4ade80;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer;">BOOKMARK</button>
+        </div>
+        <div style="margin-top:32px;padding:20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;text-align:left;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4a6b55;text-transform:uppercase;margin-bottom:10px;">Part of the Vura Ecosystem</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${['🪙 Token','🏪 Market','🖼 NFT','🏛 DAO','💸 Pay','📺 Stream','⛏ Mining'].map(e=>`<span onclick="navigate('vura-${e.split(' ')[1].toLowerCase()}')" style="padding:5px 12px;border-radius:20px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.15);font-size:12px;color:#86efac;cursor:pointer;">${e}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`);
+}
+
+function renderSearchPage(query) {
+  setPageContent(`
+    <div style="min-height:100%;background:#020702;color:#dcfce7;font-family:'Exo 2',sans-serif;padding:32px;">
+      <div style="max-width:700px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4a6b55;margin-bottom:16px;">About 2,840 results for "<strong style="color:#4ade80;">${query}</strong>"</div>
+        ${generateSearchResults(query).map(r=>`
+          <div style="margin-bottom:22px;cursor:pointer;" onclick="navigate('${r.page}')">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+              <span style="font-size:14px;">${r.favicon}</span>
+              <span style="font-size:12px;color:#4a6b55;">${r.url}</span>
+            </div>
+            <div style="font-size:18px;color:#60a5fa;margin-bottom:4px;font-weight:600;">${r.title}</div>
+            <div style="font-size:13px;color:#86efac;line-height:1.6;">${r.desc}</div>
+          </div>`).join('')}
+      </div>
+    </div>`);
+}
+
+function generateSearchResults(q) {
+  const ql = q.toLowerCase();
+  const results = [
+    { favicon:'🪙', title:'Vura Token ($VT) — Official Website', url:'vuratoken.com', desc:'The native utility token powering the Vura Stream ecosystem. 1 Billion supply, BNB Chain, launches July 1, 2027. Mine, earn, trade.', page:'vura-token' },
+    { favicon:'⛏', title:'Vura Mining App — Earn $VT Every Hour', url:'vuratoken.com/mining', desc:'Mine 0.40 VT per hour with the Vura Mining App. No hardware required. Just open the app and start earning.', page:'vura-token' },
+    { favicon:'🏪', title:'Vura Market — Shop with $VT', url:'vuramarket.com', desc:'24 verified shops accepting $VT. Buy tech, fashion, food and more. 2% platform fee burns $VT.', page:'vura-market' },
+    { favicon:'🏛', title:'Vura DAO — Community Governance', url:'vuradao.com', desc:'Decentralized governance for the Vura ecosystem. 2,847 members, 850,000 VT treasury. Vote on proposals.', page:'vura-dao' },
+    { favicon:'💸', title:'Vura Pay — Send $VT Globally', url:'vurapay.com', desc:'Send $VT to anyone, anywhere in under 3 seconds. Near-zero fees. 0.5% merchant fee. 14,820 active users.', page:'vura-pay' },
+  ];
+  return results;
+}
+
+function renderExternalPage(url) {
+  setPageContent(`<div style="min-height:100%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:sans-serif;color:#333;text-align:center;"><div style="font-size:64px;margin-bottom:16px;">🌐</div><h2 style="font-size:24px;margin-bottom:8px;">External Page</h2><p style="color:#666;margin-bottom:16px;">In a real browser deployment, this would load:<br><strong>${url}</strong></p><p style="color:#999;font-size:13px;">VuraBrowser supports VT ecosystem pages natively.</p></div>`);
+}
+
+function renderSettings() {
+  setPageContent(`
+    <div class="settings-page">
+      <div class="settings-sidebar">
+        <div class="ss-title">SETTINGS</div>
+        ${SETTINGS_MENU.map((s,i)=>`<div class="ss-item ${i===0?'active':''}" onclick="switchSettings(this,'${s.id}')">${s.icon} ${s.label}</div>`).join('')}
+      </div>
+      <div class="settings-content" id="settings-content">
+        ${renderSettingsSection('general')}
+      </div>
+    </div>`);
+}
+
+function switchSettings(el,id) {
+  document.querySelectorAll('.ss-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  const sc=document.getElementById('settings-content');
+  if(sc) sc.innerHTML=renderSettingsSection(id);
+}
+
+function renderSettingsSection(id) {
+  const sections = {
+    general:`<div class="sc-section"><div class="sc-section-title">General</div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Default Search Engine</div><div class="sr-desc">Search engine used in the address bar</div></div><select class="setting-select"><option selected>Vura Search</option><option>Google</option><option>DuckDuckGo</option><option>Bing</option></select></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Homepage</div><div class="sr-desc">Page shown when opening a new tab</div></div><select class="setting-select"><option selected>New Tab (Vura)</option><option>vuratoken.com</option><option>Custom</option></select></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Show Bookmarks Bar</div><div class="sr-desc">Always show bookmarks below toolbar</div></div><label class="toggle"><input type="checkbox" checked onchange="document.getElementById('bookmarks-bar').style.display=this.checked?'flex':'none'"><div class="toggle-slider"></div></label></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Show $VT Price in Titlebar</div><div class="sr-desc">Display live VT price at all times</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+    </div>`,
+    privacy:`<div class="sc-section"><div class="sc-section-title">Privacy & Security</div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Block Third-Party Cookies</div><div class="sr-desc">Prevent cross-site tracking</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">VT Wallet Integration</div><div class="sr-desc">Auto-connect Vura Wallet to dApps</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Block Tracking Scripts</div><div class="sr-desc">Block known advertising trackers</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">HTTPS Only Mode</div><div class="sr-desc">Only load secure HTTPS pages</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+    </div>`,
+    wallet:`<div class="sc-section"><div class="sc-section-title">Vura Wallet</div>
+      <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:8px;"><div class="sr-info"><div class="sr-title">Connected Wallet</div><div class="sr-desc" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);">VT1x4a3b2c1d5e6f7a8b9c0d...9012</div></div><div style="font-family:'Orbitron',monospace;font-size:20px;color:var(--gold);">842.50 VT <span style="font-size:13px;color:var(--muted);">≈ $8.43</span></div></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Auto-Sign Transactions</div><div class="sr-desc">Sign low-value transactions automatically</div></div><label class="toggle"><input type="checkbox"><div class="toggle-slider"></div></label></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Show VT Balance in Toolbar</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+    </div>`,
+    appearance:`<div class="sc-section"><div class="sc-section-title">Appearance</div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Theme</div></div><select class="setting-select"><option selected>Dark (Vura)</option><option>Light</option><option>System</option></select></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Font Size</div></div><select class="setting-select"><option>Small</option><option selected>Medium</option><option>Large</option></select></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Page Zoom</div></div><select class="setting-select" onchange="document.getElementById('sb-zoom').textContent=this.value"><option>80%</option><option selected>100%</option><option>120%</option><option>150%</option></select></div>
+    </div>`,
+    downloads:`<div class="sc-section"><div class="sc-section-title">Downloads</div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Download Location</div><div class="sr-desc">/Users/VuraMiner/Downloads</div></div><button onclick="notify('📁','DOWNLOADS','Folder opened')" style="padding:8px 16px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;">Change</button></div>
+      <div class="setting-row"><div class="sr-info"><div class="sr-title">Ask before downloading</div></div><label class="toggle"><input type="checkbox"><div class="toggle-slider"></div></label></div>
+    </div>`,
+    about:`<div class="sc-section"><div class="sc-section-title">About VuraBrowser</div>
+      <div style="text-align:center;padding:24px;">
+        <div style="font-size:48px;margin-bottom:12px;">🌐</div>
+        <div style="font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--accent);margin-bottom:6px;">VURA BROWSER</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:16px;">Version 1.0.0 · Built on Vura Engine · BNB Chain Native</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7;max-width:400px;margin:0 auto;">The world's first Web3 browser with native $VT integration. Browse, pay, and earn crypto without leaving your browser.</div>
+      </div>
+    </div>`,
+  };
+  return sections[id]||sections.general;
+}
+
+// ══════════════════════════════════════
+// CONTEXT MENU
+// ══════════════════════════════════════
+function showContextMenu(e) {
+  e.preventDefault();
+  const cm=document.getElementById('context-menu');
+  cm.style.left=Math.min(e.clientX,window.innerWidth-200)+'px';
+  cm.style.top=Math.min(e.clientY,window.innerHeight-250)+'px';
+  cm.classList.add('show');
+  setTimeout(()=>document.addEventListener('click',hideContextMenu,{once:true}),0);
+}
+function hideContextMenu(){document.getElementById('context-menu').classList.remove('show');}
+function ctxAction(action){
+  hideContextMenu();
+  const msgs={
+    'new-tab':'Opening in new tab',
+    'save':'Page saved as HTML',
+    'print':'Print dialog opened',
+    'inspect':'DevTools opened',
+    'source':'Page source opened',
+    'bookmark':'Page bookmarked!',
+    'clear':'Browsing data cleared'
+  };
+  if(action==='inspect') toggleDevTools();
+  else notify('🔧','ACTION',msgs[action]||action);
+}
+
+// ══════════════════════════════════════
+// NOTIFICATIONS
+// ══════════════════════════════════════
+let notifTimer=null;
+function notify(icon,title,msg) {
+  document.getElementById('notif-icon').textContent=icon;
+  document.getElementById('notif-title').textContent=title;
+  document.getElementById('notif-msg').textContent=msg;
+  const n=document.getElementById('notif');
+  n.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(hideNotif,3000);
+}
+function hideNotif(){document.getElementById('notif').classList.remove('show');}
+
+// ══════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ══════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey){
+    if(e.key==='t'){e.preventDefault();addTab();}
+    if(e.key==='w'){e.preventDefault();closeTab(activeTabId);}
+    if(e.key==='l'){e.preventDefault();document.getElementById('address-bar').focus();document.getElementById('address-bar').select();}
+    if(e.key==='r'){e.preventDefault();reloadPage();}
+    if(e.key==='f'){e.preventDefault();toggleFind();}
+    if(e.key==='d'){e.preventDefault();toggleBookmark();}
+    if(e.key==='j'){e.preventDefault();togglePanel('downloads');}
+    if(e.key==='h'){e.preventDefault();togglePanel('history');}
+    if(e.key===','){e.preventDefault();navigate('settings');}
+    if(e.key==='1'){e.preventDefault();if(tabs[0])switchTab(tabs[0].id);}
+    if(e.key==='2'){e.preventDefault();if(tabs[1])switchTab(tabs[1].id);}
+    if(e.key==='3'){e.preventDefault();if(tabs[2])switchTab(tabs[2].id);}
+  }
+  if(e.key==='F12'){e.preventDefault();toggleDevTools();}
+  if(e.key==='F5'){e.preventDefault();reloadPage();}
+  if(e.key==='Escape'){
+    hideContextMenu();
+    if(findOpen)toggleFind();
+    if(activePanelId)closePanel();
+  }
+  if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();navBack();}
+  if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();navForward();}
+});
+
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+const QUICK_LINKS = [
+  {icon:'🪙',label:'VT Token',page:'vura-token'},
+  {icon:'⛏',label:'Mining',page:'vura-token'},
+  {icon:'🏪',label:'Market',page:'vura-market'},
+  {icon:'🖼',label:'NFT',page:'vura-nft'},
+  {icon:'🏛',label:'DAO',page:'vura-dao'},
+  {icon:'💸',label:'Pay',page:'vura-pay'},
+  {icon:'📺',label:'Stream',page:'vura-stream'},
+  {icon:'⚙️',label:'Settings',page:'settings'},
+];
+
+const RECENT_SITES = [
+  {favicon:'🪙',name:'Vura Token',url:'vuratoken.com',page:'vura-token'},
+  {favicon:'🏪',name:'Vura Market',url:'vuramarket.com',page:'vura-market'},
+  {favicon:'🖼',name:'Vura NFT',url:'vuranft.com',page:'vura-nft'},
+  {favicon:'🏛',name:'Vura DAO',url:'vuradao.com',page:'vura-dao'},
+  {favicon:'💸',name:'Vura Pay',url:'vurapay.com',page:'vura-pay'},
+  {favicon:'📺',name:'Vura Stream',url:'vurastream.com',page:'vura-stream'},
+  {favicon:'⛏',name:'Mining App',url:'mining.vura.io',page:'vura-token'},
+  {favicon:'👛',name:'Vura Wallet',url:'wallet.vura.io',page:'vura-token'},
+];
+
+let HISTORY_DATA = [
+  {favicon:'🪙',title:'Vura Token',url:'vuratoken.com',time:'2m ago'},
+  {favicon:'🏪',title:'Vura Market',url:'vuramarket.com',time:'15m ago'},
+  {favicon:'🖼',title:'Vura NFT',url:'vuranft.com',time:'1h ago'},
+  {favicon:'🏛',title:'Vura DAO',url:'vuradao.com',time:'2h ago'},
+  {favicon:'💸',title:'Vura Pay',url:'vurapay.com',time:'3h ago'},
+  {favicon:'📺',title:'Vura Stream',url:'vurastream.com',time:'Yesterday'},
+  {favicon:'🌐',title:'CoinGecko — $VT',url:'coingecko.com/vt',time:'Yesterday'},
+];
+
+const DOWNLOADS = [
+  {icon:'📄',name:'vura-whitepaper-v2.pdf',size:'2.4 MB',pct:100,status:'Completed · Open file'},
+  {icon:'🖼',name:'vura-nft-collection.zip',size:'48.2 MB',pct:73,status:'Downloading... 35.2 MB of 48.2 MB'},
+  {icon:'📱',name:'vura-mining-app.apk',size:'12.8 MB',pct:100,status:'Completed · Install'},
+  {icon:'📊',name:'vura-dao-report-q1.csv',size:'840 KB',pct:100,status:'Completed · Open file'},
+];
+
+const EXTENSIONS = [
+  {icon:'🔒',name:'Vura Wallet',desc:'Native $VT wallet integration',on:true},
+  {icon:'🚫',name:'Ad Blocker Pro',desc:'Block ads and trackers everywhere',on:true},
+  {icon:'🌙',name:'Dark Mode',desc:'Force dark mode on all websites',on:false},
+  {icon:'🔑',name:'Password Manager',desc:'Secure password storage',on:true},
+  {icon:'📸',name:'Screenshot Tool',desc:'Capture full pages as PNG',on:false},
+  {icon:'🎨',name:'Vura Theme',desc:'Custom Vura green ecosystem theme',on:true},
+];
+
+const BOOKMARKS = [
+  {folder:'Vura Ecosystem',items:[
+    {favicon:'🪙',title:'Vura Token',page:'vura-token'},
+    {favicon:'🏪',title:'Vura Market',page:'vura-market'},
+    {favicon:'🖼',title:'Vura NFT',page:'vura-nft'},
+    {favicon:'🏛',title:'Vura DAO',page:'vura-dao'},
+    {favicon:'💸',title:'Vura Pay',page:'vura-pay'},
+  ]},
+  {folder:'Crypto Resources',items:[
+    {favicon:'📊',title:'CoinGecko',page:'https://coingecko.com'},
+    {favicon:'🔶',title:'BSCScan',page:'https://bscscan.com'},
+  ]},
+];
+
+const SETTINGS_MENU = [
+  {id:'general',icon:'⚙️',label:'General'},
+  {id:'privacy',icon:'🔒',label:'Privacy & Security'},
+  {id:'wallet',icon:'👛',label:'Vura Wallet'},
+  {id:'appearance',icon:'🎨',label:'Appearance'},
+  {id:'downloads',icon:'⬇️',label:'Downloads'},
+  {id:'about',icon:'ℹ️',label:'About'},
+];
+
+const CONSOLE_LINES = [
+  {time:'09:41:02',type:'info',msg:'VuraBrowser v1.0.0 loaded'},
+  {time:'09:41:02',type:'log',msg:'$VT price feed connected: $0.0100'},
+  {time:'09:41:03',type:'log',msg:'Vura Wallet extension loaded · Balance: 842.50 VT'},
+  {time:'09:41:05',type:'warn',msg:'Some resources loaded over HTTP · Consider HTTPS'},
+  {time:'09:41:06',type:'log',msg:'BNB Chain node connected · Block #38,420,142'},
+  {time:'09:41:08',type:'info',msg:'DAO sync complete · 4 active proposals'},
+];
+
+const NETWORK_DATA = [
+  {method:'GET',url:'https://api.vuratoken.com/v1/price',status:200,size:'1.2 KB',time:'42ms'},
+  {method:'GET',url:'https://api.vuratoken.com/v1/treasury',status:200,size:'3.4 KB',time:'87ms'},
+  {method:'POST',url:'https://api.vuradao.com/v1/proposals',status:200,size:'8.1 KB',time:'124ms'},
+  {method:'GET',url:'https://cdn.vuramarket.com/shops',status:200,size:'22.4 KB',time:'210ms'},
+  {method:'GET',url:'https://fonts.googleapis.com/css2',status:200,size:'4.2 KB',time:'64ms'},
+  {method:'POST',url:'https://rpc.bnb-chain.io/v1/tx',status:200,size:'0.8 KB',time:'320ms'},
+  {method:'GET',url:'https://api.vura.io/v1/mining/rate',status:200,size:'0.5 KB',time:'38ms'},
+  {method:'GET',url:'https://api.vura.io/v1/nft/floor',status:404,size:'0.2 KB',time:'95ms'},
+];
+
+const ELEMENTS_HTML = `
+<div class="elem-line"><span class="el-tag">&lt;</span><span class="el-tag">html</span> <span class="el-attr-name">lang</span>=<span class="el-attr-val">"en"</span><span class="el-tag">&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-tag">&lt;head&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag">&lt;title&gt;</span><span class="el-content">Vura Token — New Tab</span><span class="el-tag">&lt;/title&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-tag">&lt;/head&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-tag" style="color:#f5c842;">&lt;body</span> <span class="el-attr-name">class</span>=<span class="el-attr-val">"vura-page"</span><span class="el-tag" style="color:#f5c842;">&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag">&lt;nav</span> <span class="el-attr-name">class</span>=<span class="el-attr-val">"navbar"</span><span class="el-tag">&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag">&lt;div</span> <span class="el-attr-name">class</span>=<span class="el-attr-val">"nav-logo"</span><span class="el-tag">&gt;</span><span class="el-content">VURA TOKEN</span><span class="el-tag">&lt;/div&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag">&lt;/nav&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag" style="color:#4ade80;">&lt;main</span> <span class="el-attr-name">id</span>=<span class="el-attr-val">"root"</span><span class="el-tag" style="color:#4ade80;">&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag">&lt;section</span> <span class="el-attr-name">class</span>=<span class="el-attr-val">"hero"</span><span class="el-tag">&gt;</span><span class="el-tag">&lt;/section&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-indent"></span><span class="el-tag" style="color:#4ade80;">&lt;/main&gt;</span></div>
+<div class="elem-line"><span class="el-indent"></span><span class="el-tag">&lt;/body&gt;</span></div>
+<div class="elem-line"><span class="el-tag">&lt;/html&gt;</span></div>`;
+
+const SOURCE_CODE = `/* VuraBrowser Source */
+const VT_PRICE = 0.01;
+const NETWORK = 'BNB Chain';
+
+async function getBalance(address) {
+  const res = await fetch(
+    'https://api.vura.io/v1/balance/'+address
+  );
+  const data = await res.json();
+  return data.balance; // in VT
+}
+
+// Mining reward calculation
+function calcReward(hours, boost=false) {
+  const base = 0.40 * hours;
+  return boost ? base * 1.05 : base;
+}
+
+// Price feed (live)
+setInterval(async () => {
+  const price = await fetchVtPrice();
+  updateUI({ vtPrice: price });
+}, 4000);`;
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+renderTabs();
+loadPage('vura-browser://newtab', false);
+notify('🌐','VURA BROWSER','Welcome! Press Ctrl+T for new tab, F12 for DevTools');
+</script>
+</body>
+</html>
